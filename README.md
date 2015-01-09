@@ -1,2 +1,7 @@
-# hello-world2
-learning to use github
+hello-world2
+===================
+Hi Humans!
+
+Hubot here, I like Node.
+Control shift kill
+
