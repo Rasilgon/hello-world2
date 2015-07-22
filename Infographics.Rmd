@@ -1,0 +1,190 @@
+---
+title: "Infographics Profound"
+output:
+  html_document:
+    keep_md: yes
+---
+
+
+Aim: Create infoplots from profound database.
+
+## Import data and libraries
+
+First we import the data.
+
+```{r}
+#Load data: replace with your dropbox folder path
+file_db = '/home/trashtos/Dropbox/Participants/OtherTables/list.csv'
+file_coord = '/home/trashtos/Dropbox/Participants/OtherTables/coordinadesCountries.csv'
+db = read.csv(file_db, header = TRUE, sep=",") 
+coord = read.csv(file_coord, header = TRUE, sep=",") 
+```
+
+Load libraries require for plotting.
+
+```{r}
+library(plyr)
+library(ggplot2)
+library(ggmap)
+library(rworldmap)
+library(rworldxtra)
+library(reshape2)
+```
+
+
+## Bar plots
+
+#### Using ggplot
+
+Create a bar plot for gender by country.
+
+```{r, fig.height=8, fig.width=12, dpi = 144}
+# summarise data
+countMembersGender<- ddply(db,.(Country, Gender),summarise,count=length(Country))
+# add acronyms
+df = merge(countMembersGender, coord, by="Country")
+# plot
+a <- ggplot(df, aes(x = Acronym, y = count, fill = Gender)) +   labs(x = NULL, y = "Number of participants",  fill = NULL) + ggtitle("Participantsin the COST Profound action: gender") + 
+    theme(
+    axis.text = element_text(color='grey50'),
+    #axis.line = element_line(color='grey10'),
+    #legend.key = element_rect(fill = "navy"),
+    legend.background = element_rect(fill = "white"),
+    #legend.position = c(0.14, 0.80),
+    panel.grid.major = element_line(colour = "white"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, colour = "black", size = 0.2),
+    panel.background = element_rect(fill = 'white')
+    )
+b <- a + geom_bar(stat = "identity", position = "stack")
+b
+```
+
+
+Create a bar plot for ESR by country:
+
+```{r , fig.height=8, fig.width=12, dpi = 144}
+# summarise data
+countMembersESR<- ddply(db,.(Country, Early.Stage.Researcher ),summarise,count=length(Country))
+# add acronyms
+df = merge(countMembersESR, coord, by="Country")
+df$Early.Stage.Researcher<-ifelse(df$Early.Stage.Researcher=='Yes','ESR','Non-ESR') 
+
+# plot wit
+a <- ggplot(df, aes(x = Acronym, y = count, fill = Early.Stage.Researcher)) +   labs(x = NULL, y = "Number of participants",  fill = NULL) + ggtitle("Participants in the COST Profound Action:  ESR") +
+    theme(
+    axis.text = element_text(color='grey50'),
+    #axis.line = element_line(color='grey10'),
+    #legend.key = element_rect(fill = "navy"),
+    legend.background = element_rect(fill = "white"),
+    #legend.position = c(0.14, 0.80),
+    panel.grid.major = element_line(colour = "white"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, colour = "black", size = 0.2),
+    panel.background = element_rect(fill = 'white')
+    )
+    
+b <- a + geom_bar(stat = "identity", position = "stack")
+b
+
+# Try some other options
+  ## Stacked bars
+ba <-  a + geom_bar(stat = "identity", position = "stack")+ scale_fill_brewer()
+ba
+
+baa <-  a + geom_bar(stat = "identity", position = "stack")+ scale_fill_grey()
+baa
+
+  ## Adjacent bars
+c<- a + geom_bar(stat = "identity", position="dodge") 
+c
+
+d<- a + geom_bar(stat = "identity", position="dodge") + facet_grid(. ~ Early.Stage.Researcher)
+d
+
+```
+
+## Simple Bar Plots
+
+
+Create a bar plot for gender by country.
+
+```{r , fig.height=8, fig.width=12, dpi = 144 }
+# Stacked Bar Plot with Colors and Legend
+# summarise data
+countMembers<- ddply(db,.(Country),summarise,count=length(Country))
+# add acronyms
+df = merge(db, coord, by="Country")
+# prepare table
+counts = table(df$Acronym)
+par(las=1)
+barplot(counts  )
+
+# summarise data
+#countMembersGender<- ddply(db,.(Country, Gender),summarise,count=length(Country))
+# add acronyms
+#df = merge(countMembersGender, coord, by="Country")
+#
+#barplot(df$counts, besides=TRUE  )
+
+
+
+```
+
+
+
+## Map of Europe with participants
+
+Create a map with participants in the action. I plot the participants on the capital city of the country.
+
+```{r , fig.height=8, fig.width=12, dpi = 144 }
+# summarise data
+countMembers <- ddply(db,.(Country),summarise,count=length(Country))
+# add acronyms
+df = merge(countMembers, coord, by="Country")
+# Option 1: plot proportional circles
+map <- get_map(location = 'europe', zoom=4, color ="bw")
+mapPoints <- ggmap(map) +   geom_point(colour = "blue", aes(x = Lon, y = Lat, size=count), data = df, alpha = .5)
+mapPointsLegend <- mapPoints  + scale_size_area(breaks = c(5, 10, 15, 20, 25, 30, 35) , labels = c(5, 10, 15, 20, 25, 30, 35), name = "Participants")
+mapPointsLegend
+
+# Option 2: plot bars
+df<-rename(df, c("count"="Participants"))
+mapBars(df , nameX="Lon", nameY="Lat",nameZs='Participants', zColours='indianred2', barWidth = 1, barOrient = 'vert', barRelative = FALSE, ratio = 1, mapRegion='europe',addCatLegend = TRUE, addSizeLegend = TRUE, symbolSize = 3 , maxZVal=30, xlim=NA, ylim=NA, oceanCol = "white", landCol = "grey60",borderCol = "white", add=FALSE, main='', lwd=0.5, lwdSymbols=1)  
+```
+
+
+Create a map with participants in the action using pie charts and stacked bars to represent male/female and ESR/nonESR. I plot the participants on the capital city of the country.
+
+```{r , fig.height=10, fig.width=12, dpi = 144 }
+# summarise data
+countMembersESR<- ddply(db,.(Country, Early.Stage.Researcher ),summarise,count=length(Country))
+# add acronyms
+df = merge(countMembersESR, coord, by="Country")
+df$Early.Stage.Researcher<-ifelse(df$Early.Stage.Researcher=='Yes','ESR','Non-ESR') 
+# revert melt to plot data using mapPies and replace NAN with 0
+df_reverted <- dcast(df, Country ~ Early.Stage.Researcher, value.var='count')
+df_reverted[is.na(df_reverted)]<-0 #is.na df, is.nan matrix//optional
+df = merge(df_reverted, coord, by="Country")
+
+# plot pie charts
+mapPies(df, nameX="Lon", nameY="Lat", nameZs=c('Non-ESR', 'ESR'), zColours=c('indianred2', 'lightblue3'), symbolSize =1 ,ratio = 1, mapRegion='europe', addSizeLegend = TRUE, addCatLegend = TRUE  , oceanCol = "white", landCol = "grey60",borderCol = "white" )
+
+# plot stacked bars
+
+mapBars(df , nameX="Lon", nameY="Lat",nameZs=c('Non-ESR', 'ESR'), zColours=c('indianred2', 'lightblue3'), barWidth = 1, barOrient = 'vert', barRelative = TRUE, ratio = 1, mapRegion='europe',addCatLegend = TRUE, addSizeLegend = TRUE, symbolSize = 3 , maxZVal=40, xlim=NA, ylim=NA, oceanCol = "white", landCol = "grey60",borderCol = "white", add=FALSE, main='', lwd=0.5, lwdSymbols=1) 
+
+#map only participants
+          
+# plot pie charts
+countMembersGender<- ddply(db,.(Country, Gender),summarise,count=length(Country))
+# add acronyms
+df = merge(countMembersGender, coord, by="Country")
+df_reverted <- dcast(df, Country ~ Gender, value.var='count')
+df_reverted[is.na(df_reverted)]<-0 #is.na df, is.nan matrix//optional
+df = merge(df_reverted, coord, by="Country")
+mapPies(df, nameX="Lon", nameY="Lat", nameZs=c('F', 'M'), zColours=c('indianred2', 'lightblue3'), symbolSize =1 ,ratio =1, mapRegion='europe', addSizeLegend = TRUE, addCatLegend = TRUE  , oceanCol = "white", landCol = "grey60",borderCol = "white" )        
+```
+
+
+
